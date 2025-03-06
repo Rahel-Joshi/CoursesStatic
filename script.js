@@ -17,6 +17,7 @@ async function searchKnowledgeBase(query) {
 }
 
 async function callGemini(promptText) {
+    console.log("Sending prompt to Gemini:", promptText);
     try {
         const response = await fetch("/api/gemini", { // Calls Vercel API route
             method: "POST",
@@ -31,10 +32,12 @@ async function callGemini(promptText) {
         }
 
         const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+        console.log("Received data from Gemini:", data);
+        // Return the text if exists; otherwise return an empty string
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     } catch (error) {
         console.error("Error calling Gemini API:", error);
-        return "Error contacting the Gemini API.";
+        return "";
     }
 }
 
@@ -51,20 +54,28 @@ async function handleUserQuery() {
     // Show loading indicator
     answerField.innerHTML = `<div class="spinner"></div>`;
 
-    // Use knowledge base to build prompt if available
+    // Find relevant snippets from the knowledge base
     const relevantSnippets = await searchKnowledgeBase(userQuery);
     let promptText;
     if (relevantSnippets.length === 0) {
+        // If no relevant snippets, build a simple prompt with the user question.
         promptText = `User Question:\n${userQuery}\n\nAnswer in plain text:`;
     } else {
-        promptText = `Use the following snippets to answer the user's question:\n\n` + 
+        // Build prompt including the relevant snippets.
+        promptText = `Use the following snippets to answer the user's question:\n\n` +
                      relevantSnippets.map((s, i) => `Snippet ${i+1}: ${s.text}`).join("\n\n") +
                      `\n\nUser Question:\n${userQuery}\n\nAnswer in plain text:`;
     }
 
-    // Fetch answer from Gemini
+    // Call Gemini and await the answer.
     const answer = await callGemini(promptText);
-    answerField.innerText = answer;
+
+    // Check if an answer was returned.
+    if (answer.trim() === "") {
+        answerField.innerText = "No answer returned. Please try rephrasing your question.";
+    } else {
+        answerField.innerText = answer;
+    }
 }
 
 document.getElementById("sendBtn").addEventListener("click", handleUserQuery);
