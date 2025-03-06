@@ -27,18 +27,19 @@
     #example-prompts {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
       padding: 15px;
       background-color: #2c2c2c;
     }
     .prompt-bubble {
       background-color: #e74c3c;
       color: #fff;
-      padding: 15px 25px;
-      border-radius: 25px;
+      padding: 10px 20px;
+      border-radius: 20px;
       cursor: pointer;
       transition: background-color 0.3s;
-      font-size: 1.1em;
+      font-size: 1em;
       text-align: center;
     }
     .prompt-bubble:hover {
@@ -122,19 +123,19 @@
   </style>
 </head>
 <body>
-  <header>
-    Caltech Courses Chatbot
-  </header>
-  <!-- Example prompt container will be populated by JavaScript -->
+  <header>Caltech Courses Chatbot</header>
+
+  <!-- Example prompt container -->
   <div id="example-prompts"></div>
+  
   <div id="chat-container"></div>
+
   <div id="input-container">
     <input type="text" id="questionInput" placeholder="Type your question here...">
     <button id="sendBtn">Send</button>
   </div>
 
   <script>
-    // List of potential prompt texts.
     const allPrompts = [
       "Tell me about CS 38",
       "What are the prerequisites for CS 2?",
@@ -147,7 +148,6 @@
       "Explain the prerequisites for CS 137"
     ];
 
-    // Shuffle function (Fisher-Yates algorithm)
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -156,7 +156,6 @@
       return array;
     }
 
-    // Randomly choose 3 prompts from allPrompts and render them.
     const selectedPrompts = shuffle([...allPrompts]).slice(0, 3);
     const promptContainer = document.getElementById('example-prompts');
     selectedPrompts.forEach(promptText => {
@@ -167,7 +166,6 @@
       promptContainer.appendChild(bubble);
     });
 
-    // Append message to chat container
     function appendMessage(text, type) {
       const chatContainer = document.getElementById('chat-container');
       const messageDiv = document.createElement('div');
@@ -177,25 +175,21 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Function to send question to the API endpoint
     async function sendQuestion(question) {
       appendMessage(question, "user");
       const spinner = document.createElement('div');
       spinner.className = "spinner";
       document.getElementById('chat-container').appendChild(spinner);
+
       try {
-        const response = await fetch('http://localhost:5001/api/ask', {
+        const response = await fetch('/api/ask', {  // Use relative URL for hosting compatibility
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: question })
+          body: JSON.stringify({ question })
         });
         const data = await response.json();
         spinner.remove();
-        if (data.answer) {
-          appendMessage(data.answer, "bot");
-        } else {
-          appendMessage("No answer returned.", "bot");
-        }
+        appendMessage(data.answer || "No answer returned.", "bot");
       } catch (error) {
         spinner.remove();
         appendMessage("Error contacting server.", "bot");
@@ -203,7 +197,6 @@
       }
     }
 
-    // Event listener for Send button
     document.getElementById('sendBtn').addEventListener('click', () => {
       const input = document.getElementById('questionInput');
       const question = input.value.trim();
@@ -212,29 +205,18 @@
         return;
       }
       input.value = "";
-      if (document.getElementById('example-prompts')) {
-        document.getElementById('example-prompts').remove();
-      }
       sendQuestion(question);
     });
 
-    // Allow "Enter" key to send the question
     document.getElementById('questionInput').addEventListener('keyup', (e) => {
       if (e.key === "Enter") {
-        if (document.getElementById('example-prompts')) {
-          document.getElementById('example-prompts').remove();
-        }
         document.getElementById('sendBtn').click();
       }
     });
 
-    // Event listener for prompt bubbles: when clicked, use the prompt and send the question.
     document.getElementById('example-prompts').addEventListener('click', (e) => {
       if (e.target.classList.contains('prompt-bubble')) {
         const promptText = e.target.getAttribute('data-prompt');
-        if (document.getElementById('example-prompts')) {
-          document.getElementById('example-prompts').remove();
-        }
         document.getElementById('questionInput').value = promptText;
         document.getElementById('sendBtn').click();
       }
