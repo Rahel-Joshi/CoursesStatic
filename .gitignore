@@ -1,0 +1,6 @@
+.env
+/scraped_pages
+cached_courses_from_scraped.json
+cached_courses.json
+/venv
+__pycache__
