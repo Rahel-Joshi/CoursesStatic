@@ -182,10 +182,10 @@
       document.getElementById('chat-container').appendChild(spinner);
 
       try {
-        const response = await fetch('/api/ask', {  // Use relative URL for hosting compatibility
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question })
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
         });
         const data = await response.json();
         spinner.remove();
