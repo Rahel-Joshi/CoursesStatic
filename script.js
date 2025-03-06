@@ -1,33 +1,25 @@
-async function fetchKnowledgeBase() {
-    try {
-        const response = await fetch("cached_courses_from_scraped.json");
-        if (!response.ok) throw new Error("Failed to load knowledge base.");
-        return await response.json();
-    } catch (error) {
-        console.error("Error fetching knowledge base:", error);
-        return []; // Return empty array if fetch fails
-    }
-}
-
-async function searchKnowledgeBase(query) {
-    const knowledgeBase = await fetchKnowledgeBase();
-    return knowledgeBase.filter(item => item.text.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
-}
-
 async function callGemini(promptText) {
     try {
-        const response = await fetch("/api/gemini", { // Calls Vercel API route
+        const response = await fetch("/api/gemini", { // Calls Vercel API
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
         });
 
-        if (!response.ok) throw new Error("Failed to get response from Gemini API.");
-        
+        if (!response.ok) {
+            console.error("API error:", response.status, await response.text());
+            throw new Error("Failed to get response from Gemini API.");
+        }
+
         const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+        
+        if (!data.candidates || !data.candidates.length) {
+            throw new Error("No valid response from Gemini.");
+        }
+
+        return data.candidates[0].content.parts[0].text || "No meaningful response.";
     } catch (error) {
-        console.error("Error calling Gemini:", error);
+        console.error("Error contacting Gemini API:", error);
         return "Error contacting the Gemini API.";
     }
 }
@@ -45,20 +37,10 @@ async function handleUserQuery() {
     // Show loading indicator
     answerField.innerHTML = `<div class="spinner"></div>`;
 
-    // Find relevant snippets
-    const relevantSnippets = await searchKnowledgeBase(userQuery);
-    if (relevantSnippets.length === 0) {
-        answerField.innerText = "No relevant info found.";
-        return;
-    }
-
-    // Build prompt for Gemini
-    const promptText = `Use the following snippets to answer the user's question:\n\n` + 
-                        relevantSnippets.map((s, i) => `Snippet ${i+1}: ${s.text}`).join("\n\n") +
-                        `\n\nUser Question:\n${userQuery}\n\nAnswer in plain text:`;
-
     // Fetch answer from Gemini
-    const answer = await callGemini(promptText);
+    const answer = await callGemini(userQuery);
+    
+    // Remove loading indicator and show response
     answerField.innerText = answer;
 }
 
