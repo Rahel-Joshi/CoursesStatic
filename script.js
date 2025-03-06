@@ -11,19 +11,12 @@ async function fetchKnowledgeBase() {
 
 async function searchKnowledgeBase(query) {
     const knowledgeBase = await fetchKnowledgeBase();
-    if (!knowledgeBase.length) {
-        console.error("Knowledge base is empty or failed to load.");
-        return [];
-    }
-
-    return knowledgeBase.filter(item => 
-        item.text.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 5);
+    return knowledgeBase.filter(item => item.text.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
 }
 
 async function callGemini(promptText) {
     try {
-        const response = await fetch("/api/gemini", { // Calls Vercel API route
+        const response = await fetch("/api/gemini", { // Calls Vercel API
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
@@ -36,12 +29,13 @@ async function callGemini(promptText) {
         }
 
         const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "No meaningful response from Gemini.";
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
     } catch (error) {
-        console.error("Error calling Gemini:", error);
+        console.error("Error calling Gemini API:", error);
         return "Error contacting the Gemini API.";
     }
 }
+
 
 async function handleUserQuery() {
     const inputField = document.getElementById("questionInput");
@@ -59,7 +53,7 @@ async function handleUserQuery() {
     // Find relevant snippets
     const relevantSnippets = await searchKnowledgeBase(userQuery);
     if (relevantSnippets.length === 0) {
-        answerField.innerText = "No relevant info found in the knowledge base.";
+        answerField.innerText = "No relevant info found.";
         return;
     }
 
@@ -69,13 +63,8 @@ async function handleUserQuery() {
                         `\n\nUser Question:\n${userQuery}\n\nAnswer in plain text:`;
 
     // Fetch answer from Gemini
-    try {
-        const answer = await callGemini(promptText);
-        answerField.innerText = answer;
-    } catch (error) {
-        answerField.innerText = "Error retrieving an answer.";
-        console.error("Error:", error);
-    }
+    const answer = await callGemini(promptText);
+    answerField.innerText = answer;
 }
 
 document.getElementById("askButton").addEventListener("click", handleUserQuery);
