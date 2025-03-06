@@ -11,12 +11,14 @@ async function fetchKnowledgeBase() {
 
 async function searchKnowledgeBase(query) {
     const knowledgeBase = await fetchKnowledgeBase();
-    return knowledgeBase.filter(item => item.text.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+    return knowledgeBase.filter(item =>
+        item.text.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 5);
 }
 
 async function callGemini(promptText) {
     try {
-        const response = await fetch("/api/gemini", { // Calls Vercel API
+        const response = await fetch("/api/gemini", { // Calls Vercel API route
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
@@ -36,7 +38,6 @@ async function callGemini(promptText) {
     }
 }
 
-
 async function handleUserQuery() {
     const inputField = document.getElementById("questionInput");
     const answerField = document.getElementById("answer");
@@ -50,26 +51,33 @@ async function handleUserQuery() {
     // Show loading indicator
     answerField.innerHTML = `<div class="spinner"></div>`;
 
-    // Find relevant snippets
+    // Use knowledge base to build prompt if available
     const relevantSnippets = await searchKnowledgeBase(userQuery);
+    let promptText;
     if (relevantSnippets.length === 0) {
-        answerField.innerText = "No relevant info found.";
-        return;
+        promptText = `User Question:\n${userQuery}\n\nAnswer in plain text:`;
+    } else {
+        promptText = `Use the following snippets to answer the user's question:\n\n` + 
+                     relevantSnippets.map((s, i) => `Snippet ${i+1}: ${s.text}`).join("\n\n") +
+                     `\n\nUser Question:\n${userQuery}\n\nAnswer in plain text:`;
     }
-
-    // Build prompt for Gemini
-    const promptText = `Use the following snippets to answer the user's question:\n\n` + 
-                        relevantSnippets.map((s, i) => `Snippet ${i+1}: ${s.text}`).join("\n\n") +
-                        `\n\nUser Question:\n${userQuery}\n\nAnswer in plain text:`;
 
     // Fetch answer from Gemini
     const answer = await callGemini(promptText);
     answerField.innerText = answer;
 }
 
-document.getElementById("askButton").addEventListener("click", handleUserQuery);
+document.getElementById("sendBtn").addEventListener("click", handleUserQuery);
 document.getElementById("questionInput").addEventListener("keyup", (e) => {
     if (e.key === "Enter") {
-        document.getElementById("askButton").click();
+        handleUserQuery();
+    }
+});
+
+document.getElementById("example-prompts").addEventListener("click", (e) => {
+    if (e.target.classList.contains('prompt-bubble')) {
+        const promptText = e.target.getAttribute('data-prompt');
+        document.getElementById("questionInput").value = promptText;
+        handleUserQuery();
     }
 });
